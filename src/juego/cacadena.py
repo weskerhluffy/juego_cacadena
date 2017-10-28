@@ -6,6 +6,7 @@ Created on 20/10/2017
 import logging
 import sys
 from operator import add, sub
+from asyncio.log import logger
 nivel_log = logging.ERROR
 #nivel_log = logging.DEBUG
 logger_cagada = None
@@ -197,6 +198,7 @@ class SortedCollection(object):
             return self._items[i]
         raise ValueError('No item found with key at or above: %r' % (k,))
 
+    # profile
     def find_gt(self, k):
         'Return first item with a key > k.  Raise ValueError if not found'
         i = bisect_right(self._keys, k)
@@ -205,6 +207,7 @@ class SortedCollection(object):
         raise ValueError('No item found with key above: %r' % (k,))
 
 
+# profile
 def cacadena_es_subsequencia(cadenota, cadenita, posiciones_cadenota):
     idx_act = -1
     si = True
@@ -218,23 +221,25 @@ def cacadena_es_subsequencia(cadenota, cadenita, posiciones_cadenota):
         posiciones_subseq.insert(idx_act)
     return posiciones_subseq if si else None
 
+# profile
 def cacadena_remover_posicion(cadenota, posiciones_cadena, posicion):
     letra = cadenota[posicion]
     posiciones_cadena[letra].remove(posicion)
     return letra
 
+# profile
 def cacadena_genera_posiciones_cadena(cadenota, posiciones_cadena):
     for posicion, letra in enumerate(cadenota):
         posiciones_cadena.setdefault(letra, SortedCollection()).insert(posicion)
     
-#    logger_cagada.debug("las posiciones de {} son {}".format(letra, posiciones_cadena))
 
+# profile
 def cadena_remover_posiciones(cadenota, posiciones_cadena, indices_culeros, respaldo):
-    logger_cagada.debug("los idxs q c kitan {}".format(indices_culeros))
     for idx_a_borrar in indices_culeros:
         letra = cacadena_remover_posicion(cadenota, posiciones_cadena, idx_a_borrar)
         respaldo.append((idx_a_borrar, letra))
         
+# profile
 def cadena_restaurar_posiciones(cadenota, posiciones_cadena, respaldo):
     for idx_borrado, letra in respaldo:
         posiciones_cadena[letra].insert(idx_borrado)
@@ -246,22 +251,55 @@ def cadena_poner_posiciones(cadenota, posiciones_cadena, indices_culeros, respal
         respaldo.append((idx_a_poner, letra))
     cadena_restaurar_posiciones(cadenota, posiciones_cadena, respaldo)
 
+def cadena_quitar_caca(cadenota, cadenota_tmp, mierdas):
+#    logger_cagada.debug("kitando caca {}".format(mierdas))
+    for mierda in mierdas:
+        cadenota_tmp[mierda] = ","
+#    logger_cagada.debug("kedo {}".format(cadenota_tmp))
+    
+
+def cadena_poner_caca(cacadenota, cadenota_tmp, mierdas):
+#    logger_cagada.debug("poniento caca {}".format(mierdas))
+    for mierda in mierdas:
+        cadenota_tmp[mierda] = cacadenota[mierda]
+#    logger_cagada.debug("kedo {}".format(cadenota_tmp))
+    
+def cadena_find_caca(cadenota, cadenita):
+    idx_cadenota = 0
+    cadenota_tam = len(cadenota)
+    encontrados = 0
+#    logger_cagada.debug("m corto los webos {} {}".format(cadenota, cadenita))
+    
+    for caca in cadenita:
+        while(idx_cadenota < cadenota_tam and caca != cadenota[idx_cadenota]) :
+            idx_cadenota += 1
+        if(idx_cadenota < cadenota_tam):
+            encontrados += 1
+        idx_cadenota += 1
+    logger_cagada.debug("los encontraods {}".format(encontrados))
+    
+    return encontrados == len(cadenita)
+
+# profile
 def cacadena_core(cadenota, cadenita, indices_culeros):
     posiciones_cadena = {}
     idx_borrados_cnt = 0
-    cacadena_genera_posiciones_cadena(cadenota, posiciones_cadena)
+#    cacadena_genera_posiciones_cadena(cadenota, posiciones_cadena)
+    logger_cagada.debug("la cad {} la cadenita {} los idx cul {}".format(len(cadenota), len(cadenita), len(indices_culeros)))
     
     operacion = add
-    pot_2 = 1
     delta = len(cadenota)
-    while pot_2 < delta:
-        pot_2 <<= 1
-    delta = pot_2
+    exp_2 = 1
+    while exp_2 < delta:
+        exp_2 <<= 1
+#    delta = delta if (not (delta % 2)) else delta + 1
+    delta = exp_2
     tam_brinco = 0
     ultimo_bueno = 0
     cadenota_tam = len(cadenota)
+    cacadenota_tmp = [x for x in cadenota]
+#    print("la cadenota tmp {}".format(cacadenota_tmp))
     while True:
-        respaldo = []
         posiciones_subseq = None
         idx_ini = 0
         idx_fin = 0
@@ -272,17 +310,21 @@ def cacadena_core(cadenota, cadenita, indices_culeros):
         if(operacion == add):
             idx_ini = tam_brinco - delta
             idx_fin = tam_brinco
-            operacion_en_posiciones_letra = cadena_remover_posiciones
+            operacion_en_posiciones_letra = cadena_quitar_caca
         else:
             idx_ini = tam_brinco 
             idx_fin = tam_brinco + delta
-            operacion_en_posiciones_letra = cadena_poner_posiciones
+            operacion_en_posiciones_letra = cadena_poner_caca
         logger_cagada.debug("el idx ini {} idx fin {}".format(idx_ini, idx_fin))
+
         
-        operacion_en_posiciones_letra(cadenota, posiciones_cadena, indices_culeros[idx_ini:idx_fin], respaldo)
-        posiciones_subseq = cacadena_es_subsequencia(cadenota, cadenita, posiciones_cadena)
+#        operacion_en_posiciones_letra(cadenota, posiciones_cadena, indices_culeros[idx_ini:idx_fin], respaldo)
+#        posiciones_subseq = cacadena_es_subsequencia(cadenota, cadenita, posiciones_cadena)
+        operacion_en_posiciones_letra(cadenota, cacadenota_tmp, indices_culeros[idx_ini:idx_fin])
+        posiciones_subseq = cadena_find_caca(cacadenota_tmp, cadenita)
+        logger_cagada.debug("se ncontro mierda {}".format(posiciones_subseq))
         if(posiciones_subseq):
-            if(delta == len(cadenita) or delta == 1):
+            if(delta == len(cadenota) or delta == 1):
                 break
             operacion = add
             ultimo_bueno = tam_brinco
@@ -302,7 +344,6 @@ def cacadena_main():
     cacas = [int(x) - 1 for x in lineas[2].strip().split(" ")]
     
     mierda = cacadena_core(cadenota, cadenita, cacas)
-    logger_cagada.debug("la mierda es {}".format(mierda))
     print("{}".format(mierda))
 
 if __name__ == '__main__':

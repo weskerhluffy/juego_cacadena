@@ -1,2 +1,6 @@
 
 src/juego/shit
+
+*.lprof
+
+src/juego/shit1
